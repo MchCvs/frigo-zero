@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6d4aff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Frigo zéro">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" href="icon-512.png">
+<title>Frigo zéro</title>
+<style>
+:root{--p:#6d4aff}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font:16px/1.45 -apple-system,system-ui,Roboto,sans-serif;background:#f5f4f8;color:#171730;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:9;background:var(--p);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:1.15rem}
+.gear{background:none;border:0;color:#fff;font-size:1.35rem;cursor:pointer}
+main{padding:16px;max-width:620px;margin:0 auto}
+.btn{display:block;width:100%;padding:15px;border:0;border-radius:12px;font:600 1rem inherit;cursor:pointer}
+.p{background:var(--p);color:#fff}
+.s{background:#fff;color:var(--p);border:2px solid var(--p);margin-top:10px}
+textarea{width:100%;min-height:72px;margin-top:10px;padding:12px;border:1.5px solid #d5d3e0;border-radius:10px;font:inherit}
+#photo,#prev{display:none}
+#prev{max-width:100%;border-radius:12px;margin-top:12px}
+#st{display:none;margin-top:12px;padding:12px;border-radius:10px;background:#fff;font-size:.92rem}
+.d{background:#fff;border-radius:14px;padding:16px;margin-top:14px;box-shadow:0 2px 10px rgba(109,74,255,.08)}
+.d h2{font-size:1.08rem;color:var(--p);margin-bottom:8px}
+.k{display:inline-block;background:#efeaff;color:#5538c8;border-radius:999px;padding:3px 11px;font-size:.83rem;font-weight:700;margin-bottom:8px}
+.d p,.d li{font-size:.93rem;margin-top:6px}
+.d ol{padding-left:20px}
+.n{background:#e9f7ee;border-left:4px solid #34a853;padding:9px 12px;border-radius:6px;font-size:.88rem;margin-top:9px}
+.a{background:#fff4e0;border-left:4px solid #f5a623;padding:9px 12px;border-radius:6px;font-size:.88rem;margin-top:9px}
+dialog{border:0;border-radius:16px;padding:20px;max-width:330px;width:90%}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog label{display:block;font-size:.86rem;font-weight:600;margin-top:10px}
+dialog input{width:100%;padding:10px;border:1.5px solid #d5d3e0;border-radius:8px;font:inherit;margin-top:4px}
+dialog a{display:block;text-align:center;margin-top:12px;color:var(--p);font-size:.85rem}
+</style>
+</head>
+<body>
+<header><h1>🧊 Frigo zéro</h1><button class="gear" id="gear">⚙️</button></header>
+<main>
+  <button class="btn p" id="shot">📷 Photographier mon frigo</button>
+  <input type="file" id="photo" accept="image/*" capture="environment">
+  <img id="prev" alt="">
+  <textarea id="txt" placeholder="…ou tape tes ingrédients : œufs, poulet froid, riz cuit, légumes restant"></textarea>
+  <button class="btn s" id="go">🍽️ Proposer mes plats</button>
+  <div id="st"></div>
+  <div id="out"></div>
+</main>
+
+<dialog id="dlg">
+  <h3>⚙️ Réglages</h3>
+  <label>Clé API Gemini<input id="k" type="password" placeholder="AIza…" autocomplete="off"></label>
+  <label>Modèle<pre id="model">gemini-flash-latest</pre></label>
+  <button class="btn p" id="save">Enregistrer</button>
+  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Obtenir une clé gratuite →</a>
+</dialog>
+
+<script>
+const LS='zf',$=i=>document.getElementById(i);
+const DEF={k:'',m:'gemini-flash-latest'};
+let cfg=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS)||'{}'));
+let img=null;
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+$('gear').onclick=()=>{$('k').value=cfg.k;$('model').value=cfg.m;$('dlg').showModal()};
+$('shot').onclick=()=>$('photo').click();
+$('photo').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const im=new Image();
+  im.onload=()=>{
+    const c=document.createElement('canvas'),s=Math.min(1,1100/Math.max(im.width,im.height));
+    c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    img=c.toDataURL('image/jpeg',.82);
+    $('prev').src=img;$('prev').style.display='block';
+    run();
+  };
+  im.src=URL.createObjectURL(f);
+};
+$('go').onclick=run;
+
+const PROMPT=`Tu es nutritionniste-chef engagé anti-gaspillage. À partir des ingrédients détectés (ou fournis) dans le texte, propose EXACTEMENT 3 plats réalisables en français, maximisant l'usage des ingrédients disponibles (zéro déchet). Réponds UNIQUEMENT en JSON valide, sans texte autour :
+{"ingredients_detectes":["..."],"plats":[{"nom":"...","calories_par_personne":0,"personnes":2,"macros":"protéines X g / glucides Y g / lipides Z g","etapes":["...","..."],"argument_nutritionnel":"équilibre macro, fibres, micronutriments","zero_dechet":"utilisation des restes et parties souvent jetées","achats":[{"ingredient":"...","indispensable":true,"substitution":"..."}]}]}
+Règles : calories réalistes par personne ; pour tout ingrédient manquant, propose d'abord une substitution avec ce qui est déjà là, l'achat seulement si réellement indispensable.`;
+
+async function run(){
+  if(!cfg.k){$('model').innerText=cfg.m;$('dlg').showModal();say("⚠️ Ajoute ta clé API Gemini (⚙️).");return}
+  const txt=$('txt').value.trim();
+  if(!img&&!txt){say("Prends une photo ou écris tes ingrédients.");return}
+  $('out').innerHTML='';say("⏳ Analyse…");
+  const parts=[{text:PROMPT}];
+  if(img)parts.push({inline_data:{mime_type:'image/jpeg',data:img.split(',')[1]}});
+  if(txt)parts.push({text:"Ingrédients disponibles : "+txt});
+  try{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.m)}:generateContent`,{
+      method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.k},
+      body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{temperature:.6,responseMimeType:'application/json'}})})
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error?.message||('HTTP '+r.status));
+    const raw=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+    const d=JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1));
+    say("✅ Détecté : "+(d.ingredients_detectes||[]).join(', '));
+    render(d.plats||[]);
+  }catch(e){say("❌ "+e.message);}
+}
+
+function say(t){const s=$('st');s.style.display='block';s.textContent=t;}
+
+function render(plats){
+  $('out').innerHTML=plats.map(p=>`<div class="d"><h2>${esc(p.nom)}</h2>
+  <span class="k">${esc(p.calories_par_personne)} kcal/pers. · ${esc(p.personnes||2)} pers.</span>
+  <p><b>Macros :</b> ${esc(p.macros)}</p>
+  <p><b>Préparation :</b></p><ol>${(p.etapes||[]).map(e=>`<li>${esc(e)}</li>`).join('')}</ol>
+  <div class="n"><b>Équilibre :</b> ${esc(p.argument_nutritionnel)}</div>
+  <div class="n">♻️ <b>Zéro déchet :</b> ${esc(p.zero_dechet)}</div>
+  ${(p.achats||[]).length
+    ? `<div class="a"><b>À acheter :</b>${p.achats.map(a=>`<br>• ${esc(a.ingredient)}${a.indispensable?'':' (optionnel)'} — ${esc(a.substitution)}`).join('')}</div>`
+    : '<div class="n">✅ Tout est déjà dans ton frigo !</div>'}</div>`).join('');
+}
+</script>
+</body>
+</html>
