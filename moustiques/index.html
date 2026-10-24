@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1b7f4b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-512.png">
+<title>Anti-Chik</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font: 16px sans-serif; background: #f2f7f4; color: #14281d; }
+header { background: #1b7f4b; color: white; padding: 20px; text-align: center; }
+main { max-width: 600px; margin: 0 auto; padding: 20px; }
+.card { background: white; padding: 20px; margin: 15px 0; border-radius: 10px; }
+h2 { color: #1b7f4b; margin-bottom: 10px; }
+label { display: block; padding: 10px 0; border-bottom: 1px solid #eee; }
+input { margin-right: 10px; }
+button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; background: #1b7f4b; color: white; font-size: 16px; font-weight: bold; }
+</style>
+</head>
+<body>
+<header><h1>🦟 Anti-Chik</h1><p>Piton Sainte-Rose, La Réunion</p></header>
+<main>
+<div class="card">
+<h2>🧹 Chaque jour</h2>
+<div id="list"></div>
+<p id="stat" style="margin-top: 10px; font-weight: bold;"></p>
+</div>
+
+<div class="card">
+<h2>🧴 Répulsif</h2>
+<p id="rep"></p>
+<button onclick="appliquer()">Je viens d'appliquer</button>
+</div>
+
+<div class="card">
+<h2>📷 Analyser un recoin</h2>
+<button onclick="document.getElementById('photo').click()">Prendre une photo</button>
+<input type="file" id="photo" accept="image/*" capture="environment" style="display: none;">
+<div id="out"></div>
+</div>
+</main>
+
+<script>
+const L = ['Vider soucoupes', 'Seaux/arrosoirs', 'Retourner pots', 'Eau vases', 'Gouttières'];
+let s = JSON.parse(localStorage.getItem('mq') || '{"c":[], "r":0}');
+
+function draw() {
+  let html = '';
+  L.forEach((t, i) => {
+    html += '<label><input type="checkbox" ' + (s.c.includes(i) ? 'checked' : '') + ' onchange="toggle(' + i + ')"> ' + t + '</label>';
+  });
+  document.getElementById('list').innerHTML = html;
+  document.getElementById('stat').textContent = s.c.length + '/' + L.length + ' fait';
+}
+
+function toggle(i) {
+  if (s.c.includes(i)) s.c = s.c.filter(x => x !== i);
+  else s.c.push(i);
+  localStorage.setItem('mq', JSON.stringify(s));
+  draw();
+}
+
+function appliquer() {
+  const h = prompt('Reappliquer dans combien d\'heures ?', '4');
+  if (h) {
+    s.r = Date.now() + parseInt(h) * 3600000;
+    localStorage.setItem('mq', JSON.stringify(s));
+    maj_rep();
+  }
+}
+
+function maj_rep() {
+  if (!s.r) {
+    document.getElementById('rep').textContent = 'Non appliqué';
+  } else {
+    const m = Math.round((s.r - Date.now()) / 60000);
+    if (m <= 0) {
+      document.getElementById('rep').textContent = '⚠️ À reappliquer maintenant';
+    } else {
+      document.getElementById('rep').textContent = 'Encore ' + Math.floor(m / 60) + 'h ' + (m % 60) + 'min';
+    }
+  }
+}
+
+document.getElementById('photo').onchange = function(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  document.getElementById('out').textContent = '✓ Photo prise';
+};
+
+draw();
+maj_rep();
+setInterval(maj_rep, 60000);
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
