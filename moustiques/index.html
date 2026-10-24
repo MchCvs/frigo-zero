@@ -11,27 +11,34 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font: 16px sans-serif; background: #f2f7f4; color: #14281d; }
 header { background: #1b7f4b; color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-header h1 { flex: 1; }
-.gear { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+header div h1 { margin: 0; font-size: 1.5rem; }
+header div p { margin: 3px 0 0 0; font-size: 0.85rem; opacity: 0.9; }
+.gear { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 5px; }
 main { max-width: 600px; margin: 0 auto; padding: 20px; }
 .card { background: white; padding: 20px; margin: 15px 0; border-radius: 10px; }
 h2 { color: #1b7f4b; margin-bottom: 10px; }
 label { display: block; padding: 10px 0; border-bottom: 1px solid #eee; }
 input[type=checkbox] { margin-right: 10px; }
 input[type=password] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
-button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; background: #1b7f4b; color: white; font-size: 16px; font-weight: bold; }
-button.s { background: white; color: #1b7f4b; border: 2px solid #1b7f4b; }
+button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; background: #1b7f4b; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
 #photo { display: none; }
-#out { white-space: pre-wrap; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px; }
-dialog { padding: 20px; border-radius: 10px; border: none; }
+#out { white-space: pre-wrap; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px; font-size: 0.9rem; }
+dialog { padding: 20px; border-radius: 10px; border: none; max-width: 90%; }
 dialog::backdrop { background: rgba(0,0,0,0.5); }
+dialog h3 { margin-bottom: 15px; }
+dialog label { border: none; margin-bottom: 10px; }
+dialog a { display: block; text-align: center; margin-top: 10px; color: #1b7f4b; text-decoration: none; }
 </style>
 </head>
 <body>
 <header>
+<div>
 <h1>🦟 Anti-Chik</h1>
+<p>Piton Sainte-Rose, La Réunion</p>
+</div>
 <button class="gear" onclick="document.getElementById('dlg').showModal()">⚙️</button>
 </header>
+
 <main>
 <div class="card">
 <h2>🧹 Chaque jour</h2>
@@ -41,7 +48,33 @@ dialog::backdrop { background: rgba(0,0,0,0.5); }
 
 <div class="card">
 <h2>🧴 Répulsif</h2>
-<p
+<p id="rep"></p>
+<button onclick="appliquer()">Je viens d'appliquer</button>
+</div>
+
+<div class="card">
+<h2>📷 Analyser un recoin</h2>
+<button onclick="document.getElementById('photo').click()">Prendre une photo</button>
+<input type="file" id="photo" accept="image/*" capture="environment">
+<div id="out"></div>
+</div>
+</main>
+
+<dialo
+<p>Piton Sainte-Rose, La Réunion</p>
+</div>
+<button class="gear" onclick="document.getElementById('dlg').showModal()">⚙️</button>
+</header>
+
+<main>
+<div class="card">
+<h2>🧹 Chaque jour</h2>
+<div id="list"></div>
+<p id="stat" style="margin-top: 10px; font-weight: bold;"></p>
+</div>
+
+<div class="card">
+<h2>🧴 Répulsif</h2>
 <p id="rep"></p>
 <button onclick="appliquer()">Je viens d'appliquer</button>
 </div>
@@ -108,6 +141,7 @@ function savekey() {
   cfg.k = document.getElementById('apikey').value.trim();
   localStorage.setItem('zf', JSON.stringify(cfg));
   document.getElementById('dlg').close();
+  alert('Clé enregistrée');
 }
 
 document.getElementById('photo').onchange = function(e) {
