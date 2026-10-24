@@ -123,6 +123,10 @@ function render(plats){
     : '<div class="n">✅ Tout est déjà dans ton frigo !</div>'}</div>`).join('');
 }
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+const _r=render;
+render=function(p){window.PL=p;_r(p);document.querySelectorAll('.d').forEach((d,i)=>{const b=document.createElement('button');b.className='btn s';b.textContent='📤 Partager';b.onclick=()=>shr(i);d.appendChild(b)})};
+function shr(i){const p=PL[i],t=`🍽️ ${p.nom} (${p.calories_par_personne} kcal/pers.)\n`+(p.etapes||[]).map((e,n)=>`${n+1}. ${e}`).join('\n')+`\n♻️ ${p.zero_dechet}\n— Frigo zéro`;
+if(navigator.share)navigator.share({title:p.nom,text:t}).catch(()=>{});else navigator.clipboard.writeText(t).then(()=>say('📋 Recette copiée'))}
 </script>
 </body>
 </html>
