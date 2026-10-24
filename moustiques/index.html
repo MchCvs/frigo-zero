@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b7f4b"><link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-512.png"><link rel="apple-touch-icon" href="icon-512.png">
+<title>Anti-moustiques</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:16px/1.45 system-ui,sans-serif;background:#f2f7f4;color:#14281d;padding-bottom:30px}
+header{background:#1b7f4b;color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;font-weight:700;font-size:1.15rem}
+main{padding:16px;max-width:620px;margin:0 auto}
+.c{background:#fff;border-radius:14px;padding:16px;margin-top:14px;box-shadow:0 2px 8px #0001}
+h2{font-size:1.05rem;color:#1b7f4b;margin-bottom:8px}
+label{display:block;padding:9px 0;border-bottom:1px solid #eee}
+input[type=checkbox]{width:20px;height:20px;vertical-align:middle;margin-right:8px}
+button{width:100%;padding:14px;margin-top:10px;border:0;border-radius:12px;background:#1b7f4b;color:#fff;font-size:1rem;font-weight:600}
+#out{white-space:pre-wrap;margin-top:10px;font-size:.93rem}
+#photo{display:none}
+</style></head><body>
+<header>🦟 Anti-moustiques</header>
+<main>
+<div class="c"><h2>🧹 Gîtes larvaires du jour</h2><div id="list"></div><p id="pg" style="margin-top:8px;font-weight:600"></p></div>
+<div class="c"><h2>🧴 Répulsif</h2><p id="rep"></p><button id="app">Je viens d'en appliquer</button></div>
+<div class="c"><h2>📷 Analyser un recoin</h2><p>Photographie jardin, terrasse ou pièce : l'IA repère les eaux stagnantes.</p>
+<button id="shot">Prendre une photo</button><input type="file" id="photo" accept="image/*" capture="environment"><div id="out"></div></div>
+</main>
+<script>
+const $=i=>document.getElementById(i),today=new Date().toISOString().slice(0,10);
+const L=['Vider les soucoupes des pots','Vider seaux et arrosoirs','Nettoyer les gouttières','Couvrir fûts et citernes','Retourner bâches, jouets, pots','Changer l\'eau des vases et gamelles','Vérifier pneus et bidons','Curer regards et siphons'];
+let s=JSON.parse(localStorage.getItem('mq')||'{}');
+if(s.d!==today)s={d:today,c:[],r:s.r};
+const save=()=>localStorage.setItem('mq',JSON.stringify(s));
+function draw(){
+$('list').innerHTML=L.map((t,i)=>`<label><input type="checkbox" data-i="${i}" ${s.c.includes(i)?'checked':''}>${t}</label>`).join('');
+$('pg').textContent=s.c.length+'/'+L.length+' fait aujourd\'hui';
+$('rep').textContent=s.r?(Date.now()>s.r?'⚠️ À réappliquer maintenant':'Prochaine application à '+new Date(s.r).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})):'Pas encore appliqué';}
+$('list').onchange=e=>{const i=+e.target.dataset.i;s.c=e.target.checked?[...s.c,i]:s.c.filter(x=>x!==i);save();draw()};
+$('app').onclick=()=>{const h=+prompt('Réappliquer dans combien d\'heures ? (voir l\'étiquette)',4)||4;s.r=Date.now()+h*36e5;save();draw()};
+$('shot').onclick=()=>$('photo').click();
+$('photo').onchange=e=>{
+const f=e.target.files[0];if(!f)return;const im=new Image();
+im.onload=()=>{const c=document.createElement('canvas'),k=Math.min(1,1100/Math.max(im.width,im.height));
+c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);ask(c.toDataURL('image/jpeg',.82).split(',')[1])};
+im.src=URL.createObjectURL(f)};
+async function ask(b64){
+const cfg=JSON.parse(localStorage.getItem('zf')||'{}');
+if(!cfg.k){const k=prompt('Clé API Gemini ?');if(!k)return;cfg.k=k.trim();localStorage.setItem('zf',JSON.stringify(cfg))}
+$('out').textContent='⏳ Analyse…';
+try{const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${cfg.m||'gemini-flash-latest'}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.k},
+body:JSON.stringify({contents:[{role:'user',parts:[{text:"Tu aides à lutter contre les moustiques (dengue, chikungunya) à La Réunion. Sur cette photo, repère les gîtes larvaires potentiels (eau stagnante, récipients, bâches, gouttières, plantes en soucoupe…). Réponds en français, liste courte : lieu repéré → action concrète. Si rien à signaler, dis-le.\"},{inline_data:{mime_type:'image/jpeg',data:b64}}]}]})});
+const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);
+$('out').textContent=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('')}
+catch(e){$('out').textContent='❌ '+e.message}}
+draw();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+</script></body></html>
