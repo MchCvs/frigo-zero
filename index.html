@@ -82,7 +82,7 @@ $('photo').onchange=e=>{
   };
   im.src=URL.createObjectURL(f);
 };
-$('go').onclick=run;
+$('save').onclick=()=>{cfg.k=$('k').value.trim();localStorage.setItem(LS,JSON.stringify(cfg));$('dlg').close()};$('go').onclick=run;
 
 const PROMPT=`Tu es nutritionniste-chef engagé anti-gaspillage. À partir des ingrédients détectés (ou fournis) dans le texte, propose EXACTEMENT 3 plats réalisables en français, maximisant l'usage des ingrédients disponibles (zéro déchet). Réponds UNIQUEMENT en JSON valide, sans texte autour :
 {"ingredients_detectes":["..."],"plats":[{"nom":"...","calories_par_personne":0,"personnes":2,"macros":"protéines X g / glucides Y g / lipides Z g","etapes":["...","..."],"argument_nutritionnel":"équilibre macro, fibres, micronutriments","zero_dechet":"utilisation des restes et parties souvent jetées","achats":[{"ingredient":"...","indispensable":true,"substitution":"..."}]}]}
@@ -122,6 +122,7 @@ function render(plats){
     ? `<div class="a"><b>À acheter :</b>${p.achats.map(a=>`<br>• ${esc(a.ingredient)}${a.indispensable?'':' (optionnel)'} — ${esc(a.substitution)}`).join('')}</div>`
     : '<div class="n">✅ Tout est déjà dans ton frigo !</div>'}</div>`).join('');
 }
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script>
 </body>
 </html>
